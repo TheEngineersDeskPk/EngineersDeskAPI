@@ -14,6 +14,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<SqlServerContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddMemoryCache();
+builder.Services.AddLazyCache();
 
 var app = builder.Build();
 

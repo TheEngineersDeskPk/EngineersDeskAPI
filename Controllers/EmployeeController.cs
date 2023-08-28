@@ -1,7 +1,10 @@
 ﻿using DatabaseProject.Interfaces;
 using DatabaseProject.Models;
+using EngineersDeskAPI.Caching;
+using LazyCache;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -12,25 +15,31 @@ namespace EngineersDeskAPI.Controllers
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeRepository _EmployeeRepository;
+        private ICacheProvider _CacheProvider;
 
-        public EmployeeController (IEmployeeRepository employeeRepository)
+        public EmployeeController (IEmployeeRepository employeeRepository, ICacheProvider cacheProvider)
         {
             _EmployeeRepository = employeeRepository;
+            _CacheProvider = cacheProvider;
         }
 
         [HttpGet]
 
         public ActionResult GetEmployees()
         {
-            try
+            if(!_CacheProvider.TryGetValue(CacheKeys.Employee, out List<Employee> employees))
             {
-                var employees = _EmployeeRepository.GetEmployees();
-                return Ok(employees);
+                employees = _EmployeeRepository.GetEmployees();
+
+                var cacheEntryOption = new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpiration = DateTime.Now.AddSeconds(30),
+                    SlidingExpiration = TimeSpan.FromSeconds(30),
+                    Size = 1024
+                };
+                _CacheProvider.Set(CacheKeys.Employee, employees, cacheEntryOption);
             }
-            catch(Exception ex)
-            {
-                return StatusCode(StatusCodes.Status417ExpectationFailed, ex.Message);
-            }
+            return Ok(employees);
         }
 
         [HttpGet]
@@ -109,6 +118,7 @@ namespace EngineersDeskAPI.Controllers
             }
           
         }
+
 
     }
 }
